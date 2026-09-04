@@ -1,7 +1,7 @@
 [Unit]
 Description=Unitree MQTT bridge on Jetson
-After=network-online.target
-Wants=network-online.target
+After=NetworkManager.service network-online.target
+Wants=NetworkManager.service network-online.target
 
 [Service]
 Type=simple

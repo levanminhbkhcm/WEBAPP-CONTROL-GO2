@@ -1,6 +1,8 @@
 #include <MQTTClient.h>
 #include <nlohmann/json.hpp>
 
+#include "wifi_config.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -48,6 +50,7 @@ struct Args {
   std::string client_id = "unitree-jetson-cpp";
   bool dry_run = false;
   bool insecure_tls = false;
+  bool skip_wifi = false;
 };
 
 struct Velocity {
@@ -97,6 +100,7 @@ std::string usage(const char* program) {
       << "  --topic-prefix unitree/cdvd\n"
       << "  --client-id unitree-jetson-cpp\n"
       << "  --dry-run\n"
+      << "  --skip-wifi\n"
       << "  --insecure-tls\n";
   return output.str();
 }
@@ -142,6 +146,11 @@ Args parse_args(int argc, char** argv) {
       continue;
     }
 
+    if (token == "--skip-wifi") {
+      args.skip_wifi = true;
+      continue;
+    }
+
     if (token.rfind("--", 0) != 0) {
       throw std::invalid_argument("Unexpected argument: " + token);
     }
@@ -173,6 +182,101 @@ Args parse_args(int argc, char** argv) {
   }
 
   return args;
+}
+
+std::string shell_quote(const std::string& value) {
+  std::string quoted = "'";
+  for (char ch : value) {
+    if (ch == '\'') {
+      quoted += "'\"'\"'";
+    } else {
+      quoted += ch;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+bool run_shell_quiet(const std::string& command) {
+  return std::system((command + " >/dev/null 2>&1").c_str()) == 0;
+}
+
+bool is_wifi_placeholder() {
+  const std::string ssid = wifi_config::kWifiSsid;
+  const std::string password = wifi_config::kWifiPassword;
+  return ssid.empty() || password.empty() ||
+         ssid == "TEN_WIFI_CUA_BAN" ||
+         password == "MAT_KHAU_WIFI_CUA_BAN";
+}
+
+bool wifi_is_connected() {
+  const std::string iface = wifi_config::kWifiInterface;
+  return run_shell_quiet(
+      "nmcli -t -f DEVICE,STATE dev status | grep -Fxq " +
+      shell_quote(iface + ":connected"));
+}
+
+bool connectivity_is_ready() {
+  return run_shell_quiet(
+      "getent hosts " + shell_quote(wifi_config::kConnectivityCheckHost));
+}
+
+void ensure_wifi_connected(const Args& args) {
+  if (args.skip_wifi || !wifi_config::kEnableWifiAutoConnect) {
+    std::cout << "WiFi auto connect: skipped\n";
+    return;
+  }
+
+  if (is_wifi_placeholder()) {
+    throw std::runtime_error(
+        "WiFi SSID/password chua duoc cau hinh trong "
+        "jetson_cpp/src/wifi_config.hpp");
+  }
+
+  if (!run_shell_quiet("command -v nmcli")) {
+    throw std::runtime_error(
+        "Khong tim thay nmcli. Cai NetworkManager bang: "
+        "sudo apt install -y network-manager");
+  }
+
+  const std::string iface = wifi_config::kWifiInterface;
+  const std::string ssid = wifi_config::kWifiSsid;
+  const std::string password = wifi_config::kWifiPassword;
+  const std::string connect_command =
+      "nmcli dev wifi connect " + shell_quote(ssid) +
+      " password " + shell_quote(password) +
+      " ifname " + shell_quote(iface);
+
+  std::cout << "WiFi auto connect: interface=" << iface
+            << ", ssid=" << ssid << '\n';
+
+  run_shell_quiet("nmcli radio wifi on");
+  run_shell_quiet("nmcli dev wifi rescan ifname " + shell_quote(iface));
+
+  const auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::seconds(
+                            wifi_config::kWifiConnectTimeoutSeconds);
+  auto last_connect_attempt = std::chrono::steady_clock::time_point::min();
+
+  while (std::chrono::steady_clock::now() < deadline) {
+    if (wifi_is_connected() && connectivity_is_ready()) {
+      std::cout << "WiFi auto connect: connected and internet ready\n";
+      return;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    if (last_connect_attempt == std::chrono::steady_clock::time_point::min() ||
+        now - last_connect_attempt >= std::chrono::seconds(10)) {
+      last_connect_attempt = now;
+      run_shell_quiet(connect_command);
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+
+  throw std::runtime_error(
+      "Khong ket noi duoc WiFi hoac khong resolve duoc broker trong thoi gian "
+      "cho. Kiem tra SSID/password, interface WiFi va internet.");
 }
 
 std::string trim_slashes(std::string value) {
@@ -787,6 +891,7 @@ class Bridge {
 int main(int argc, char** argv) {
   try {
     Args args = parse_args(argc, argv);
+    ensure_wifi_connected(args);
     auto adapter = make_adapter(args);
     Bridge bridge(std::move(args), std::move(adapter));
 

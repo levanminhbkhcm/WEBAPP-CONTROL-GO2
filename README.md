@@ -47,7 +47,7 @@ Mở URL local mà dev server in ra. Nhận diện giọng nói tiếng Việt c
 
 ## Cài đặt C++ bridge trên Jetson
 
-Các bước dưới đây giả định Jetson chạy Ubuntu 20.04/22.04 và nối mạng được tới robot qua Ethernet.
+Các bước dưới đây giả định Jetson chạy Ubuntu 20.04/22.04, có WiFi để lên MQTT broker và có interface SDK2 nối tới máy tính motion của robot. Dây Ethernet nối Jetson với máy tính chỉ cần dùng khi nạp/cài chương trình; sau đó bridge tự kết nối WiFi khi khởi động.
 
 1. Cài công cụ build và thư viện hệ thống:
 
@@ -55,7 +55,7 @@ Các bước dưới đây giả định Jetson chạy Ubuntu 20.04/22.04 và n�
 sudo apt update
 sudo apt install -y git cmake g++ build-essential \
   libyaml-cpp-dev libeigen3-dev libboost-all-dev libfmt-dev \
-  libssl-dev nlohmann-json3-dev libpaho-mqtt-dev
+  libssl-dev nlohmann-json3-dev libpaho-mqtt-dev network-manager
 ```
 
 Nếu `libpaho-mqtt-dev` trên Ubuntu của Jetson không hỗ trợ WebSocket/WSS, build Paho MQTT C từ source:
@@ -74,7 +74,35 @@ sudo cmake --install build
 sudo ldconfig
 ```
 
-2. Cài Unitree SDK2 C++:
+2. Cấu hình WiFi cố định trong code:
+
+```bash
+cd ~/WEBAPP-CONTROL-GO2
+nano jetson_cpp/src/wifi_config.hpp
+```
+
+Sửa 2 dòng này theo WiFi thực tế:
+
+```cpp
+inline constexpr const char* kWifiSsid = "TEN_WIFI_CUA_BAN";
+inline constexpr const char* kWifiPassword = "MAT_KHAU_WIFI_CUA_BAN";
+```
+
+Kiểm tra tên interface WiFi:
+
+```bash
+ip link
+```
+
+Nếu interface không phải `wlan0`, sửa thêm dòng:
+
+```cpp
+inline constexpr const char* kWifiInterface = "wlan0";
+```
+
+Lưu ý: repo GitHub đang public, không nên push mật khẩu WiFi thật lên GitHub.
+
+3. Cài Unitree SDK2 C++:
 
 ```bash
 git clone https://github.com/unitreerobotics/unitree_sdk2.git
@@ -85,7 +113,7 @@ sudo cmake --install build
 sudo ldconfig
 ```
 
-3. Build bridge C++ của dự án:
+4. Build bridge C++ của dự án:
 
 ```bash
 cd ~/WEBAPP-CONTROL-GO2/jetson_cpp
@@ -94,13 +122,13 @@ cmake --build build -j"$(nproc)"
 sudo cmake --install build
 ```
 
-4. Tìm interface mạng nối robot:
+5. Tìm interface SDK2 nối xuống máy tính motion của robot:
 
 ```bash
 ip link
 ```
 
-Ví dụ interface là `eth0`, chạy bridge cho R1:
+Ví dụ interface SDK2 là `eth0`, chạy bridge cho R1:
 
 ```bash
 unitree_mqtt_bridge \
@@ -109,6 +137,8 @@ unitree_mqtt_bridge \
   --broker-url wss://broker.emqx.io:8084/mqtt \
   --topic-prefix unitree/cdvd
 ```
+
+`--network-interface eth0` là interface SDK2 để gửi lệnh xuống máy tính motion của robot, không phải dây Ethernet tạm dùng để nạp chương trình từ máy tính.
 
 Chạy dry-run để thử MQTT khi chưa cắm robot hoặc chưa cài SDK2:
 
@@ -119,9 +149,15 @@ cmake --build build-dryrun -j"$(nproc)"
 ./build-dryrun/unitree_mqtt_bridge --robot r1 --dry-run
 ```
 
+Nếu đang test trên môi trường đã có sẵn mạng và muốn bỏ qua bước tự nối WiFi:
+
+```bash
+./build-dryrun/unitree_mqtt_bridge --robot r1 --dry-run --skip-wifi
+```
+
 ## Chạy C++ bridge bằng systemd
 
-Sửa `jetson_cpp/unitree-mqtt-bridge.service` nếu username, thư mục repo hoặc interface mạng khác mẫu.
+Sửa `jetson_cpp/unitree-mqtt-bridge.service` nếu username, thư mục repo hoặc interface SDK2 khác mẫu. Khi service chạy, chương trình sẽ tự bật WiFi bằng `nmcli`, kết nối SSID/password đã fix trong `wifi_config.hpp`, kiểm tra DNS tới `broker.emqx.io`, rồi mới kết nối MQTT.
 
 ```bash
 sudo cp jetson_cpp/unitree-mqtt-bridge.service /etc/systemd/system/
@@ -129,6 +165,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now unitree-mqtt-bridge
 journalctl -u unitree-mqtt-bridge -f
 ```
+
+Sau khi đã `enable` service, lần sau chỉ cần cấp nguồn cho Jetson. Jetson không cần cắm dây Ethernet vào máy tính để web app gửi lệnh; web app gửi MQTT lên broker, Jetson nhận qua WiFi rồi bridge mới gửi high-level command xuống máy tính motion của robot.
 
 ## Lệnh đã map
 
