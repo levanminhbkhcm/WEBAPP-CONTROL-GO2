@@ -47,6 +47,8 @@ Mở URL local mà dev server in ra. Nhận diện giọng nói tiếng Việt c
 
 ## Cài đặt C++ bridge trên Jetson
 
+Note chuyên biệt cho quy trình copy sang Ubuntu/Jetson, sửa WiFi, build, cài service, test MQTT và gỡ cài đặt nằm tại `jetson_cpp/NOTE_CAI_DAT_JETSON.md`.
+
 Các bước dưới đây giả định Jetson chạy Ubuntu 20.04/22.04, có WiFi để lên MQTT broker và có interface SDK2 nối tới máy tính motion của robot. Dây Ethernet nối Jetson với máy tính chỉ cần dùng khi nạp/cài chương trình; sau đó bridge tự kết nối WiFi khi khởi động.
 
 1. Cài công cụ build và thư viện hệ thống:
