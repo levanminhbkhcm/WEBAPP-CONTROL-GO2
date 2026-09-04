@@ -537,6 +537,7 @@ export default function Home() {
   const [interimTranscript, setInterimTranscript] = useState('');
   const [detectedVoiceCommand, setDetectedVoiceCommand] = useState('');
   const [voiceError, setVoiceError] = useState('');
+  const [webSpeechSupported, setWebSpeechSupported] = useState(false);
   const [logs, setLogs] = useState<LogItem[]>([]);
 
   const mqttClientRef = useRef<MqttClient | null>(null);
@@ -561,10 +562,6 @@ export default function Home() {
     [baseTopic],
   );
 
-  const webSpeechSupported =
-    typeof window !== 'undefined' &&
-    Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
-
   const addLog = useCallback(
     (level: LogItem['level'], message: string) => {
       setLogs((current) =>
@@ -581,6 +578,16 @@ export default function Home() {
     },
     [setLogs],
   );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setWebSpeechSupported(
+        Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let disposed = false;
