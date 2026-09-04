@@ -26,6 +26,18 @@ Ghi chú: SDK2 C++ hiện cung cấp high-level loco client trong namespace `uni
 
 ## Chạy web app
 
+Trên Windows có thể chạy nhanh bằng file exe ở thư mục gốc:
+
+```powershell
+.\Run-WebApp.exe
+```
+
+Hoặc bấm đúp `Run-WebApp.exe` trong File Explorer. File này sẽ khởi động web app local và mở trình duyệt.
+
+Nếu chạy trên máy khác mà exe báo thiếu Node.js/pnpm, cài Node.js 22 trở lên rồi chạy lại exe.
+
+Chạy thủ công bằng Terminal:
+
 ```bash
 pnpm install
 pnpm dev

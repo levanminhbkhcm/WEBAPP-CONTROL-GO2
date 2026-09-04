@@ -11,6 +11,15 @@ const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
+const ignoredWatchPaths = [
+  '**/.git/**',
+  '**/.next/**',
+  '**/.vinext/**',
+  '**/.wrangler/**',
+  '**/dist/**',
+  '**/node_modules/**',
+  '**/tools/**',
+];
 
 const localBindingConfig = {
   main: 'vinext/server/fetch-handler',
@@ -46,9 +55,15 @@ export default defineConfig(async () => {
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      watch: isCodexSeatbeltSandbox
+        ? {
+            ignored: ignoredWatchPaths,
+            useFsEvents: false,
+            usePolling: true,
+          }
+        : { ignored: ignoredWatchPaths },
+    },
     plugins: [
       vinext(),
       sites(),
