@@ -1,0 +1,16 @@
+[Unit]
+Description=Unitree MQTT bridge on Jetson
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jetson
+WorkingDirectory=/home/jetson/WEBAPP-CONTROL-GO2
+Environment=LD_LIBRARY_PATH=/usr/local/lib:/opt/unitree_robotics/lib
+ExecStart=/usr/local/bin/unitree_mqtt_bridge --robot r1 --network-interface eth0 --broker-url wss://broker.emqx.io:8084/mqtt --topic-prefix unitree/cdvd
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

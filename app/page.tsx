@@ -240,7 +240,7 @@ const COMMANDS: RobotCommand[] = [
     keywords: ['bắt tay', 'shake hand', 'chào bằng tay'],
     sdk: {
       r1: {
-        method: 'LocoClient.ShakeHand()',
+        method: 'LocoClient.ShakeHand(0) + ShakeHand(1)',
         supported: true,
       },
       go2: {
@@ -258,7 +258,7 @@ const COMMANDS: RobotCommand[] = [
     keywords: ['stand up', 'đứng lên', 'đứng dậy', 'dựng lên'],
     sdk: {
       r1: {
-        method: 'LocoClient.Squat2StandUp()',
+        method: 'LocoClient.StandUp()',
         supported: true,
       },
       go2: {
@@ -275,7 +275,7 @@ const COMMANDS: RobotCommand[] = [
     keywords: ['stand down', 'hạ xuống', 'ngồi xuống', 'nằm xuống'],
     sdk: {
       r1: {
-        method: 'LocoClient.StandUp2Squat()',
+        method: 'LocoClient.Squat()',
         supported: true,
       },
       go2: {
