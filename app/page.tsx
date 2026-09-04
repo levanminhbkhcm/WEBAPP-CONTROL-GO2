@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import {
   Activity,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Bot,
   CheckCircle2,
   CircleStop,
   Clock3,
@@ -924,21 +924,17 @@ export default function Home() {
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b-2 border-slate-900 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-16 w-36 shrink-0 items-center justify-center rounded-[4px] border-2 border-slate-900 bg-emerald-50 text-center text-sm font-black leading-tight text-slate-950">
-              Logo
-              <br />
-              Trường CĐVĐ
-            </div>
-            <div className="hidden h-12 w-12 items-center justify-center rounded-[6px] bg-slate-950 text-white md:flex">
-              <Bot className="size-7" aria-hidden="true" />
-            </div>
+          <div className="flex items-center">
+            <Image
+              src="/logo-cao-dang-vien-dong.png"
+              alt="Logo Trường Cao đẳng Viễn Đông"
+              width={80}
+              height={80}
+              className="h-20 w-20 shrink-0 rounded-[6px] object-contain"
+            />
           </div>
 
           <div className="text-left md:text-center">
-            <p className="text-xs font-bold uppercase text-emerald-700">
-              Unitree SDK2 / MQTT
-            </p>
             <h1 className="text-2xl font-black leading-tight text-slate-950 md:text-3xl">
               ỨNG DỤNG ĐIỀU KHIỂN ROBOT UNITREE TỪ XA
             </h1>
